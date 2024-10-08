@@ -5,8 +5,12 @@
   "description": "Generate event JSON and redirect to popin.site.",
   "content_scripts": [
     {
-      "matches": ["*://*/*"],  
-      "js": ["content.js"]
+      "matches": [
+        "https://lu.ma/*"
+      ],
+      "js": [
+        "content.js"
+      ]
     }
   ],
   "background": {
