@@ -85,7 +85,7 @@ button.addEventListener('click', async () => {
         const response = await fetch(apiUrl, {
             method: 'GET', // Use GET method
             headers: {
-                'Content-Type': 'application/json' // Optional, set based on your needs
+                'Content-Type': 'application/json' 
             }
         });
         
