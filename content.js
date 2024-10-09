@@ -90,15 +90,18 @@ button.addEventListener('click', async () => {
         });
         
         if (!response.ok) {
-            const errorText = await response.text(); // Get error response text
+            const errorText = await response.text(); 
             throw new Error(`Network response was not ok: ${errorText}`);
         }
         
         const data = await response.json(); // If there is a returned JSON data
-        console.log("Response from server:", data); // Debugging output for server response
+        console.log("Response from server:", data); 
     } catch (error) {
         console.error("Error sending eventId to the backend:", error);
     }
+
+    // Open the popin page after sending the eventId
+    window.open("https://beta.popin.site", "_blank");
 });
 
 // Append the button to the webpage
