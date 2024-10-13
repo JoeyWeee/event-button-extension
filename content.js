@@ -10,23 +10,29 @@ function Extract(text) {
         .join('');  // Join the words into a single string without spaces
 }
 
-// Create a button
+// 创建按钮
 let button = document.createElement('button');
-button.innerText = "Meet other attenders"; 
+button.innerText = "Meet other attendees at Popin's!"; 
+button.className = "popin_button";
 
-// Add button styles
-button.style.position = "fixed";
-button.style.top = "20px";
-button.style.right = "20px";
-button.style.zIndex = "1000";
-button.style.padding = "10px";
-button.style.backgroundColor = "#FF4500";  // Change the background color
-button.style.color = "#fff";  // Keep the text color white
+// 添加按钮样式
+button.style.backgroundColor = "#FF4500";  // 更改背景颜色
+button.style.color = "#fff";  // 保持文本颜色为白色
 button.style.border = "none";
 button.style.borderRadius = "5px";
 button.style.cursor = "pointer";
+button.style.height = "40px";
+button.style.width = "auto";
+button.style.padding = "5px 5px 5px 5px";
+button.style.whiteSpace = "normal";
 
-// Function to embed the button in the correct container based on the site
+// 创建一个 div 包装按钮
+let buttonContainer = document.createElement('div');
+buttonContainer.className = "button_container";  // 设置 div 的类名
+buttonContainer.appendChild(button);  // 将按钮添加到 div 中
+buttonContainer.style.padding="10px 0"
+
+// 函数在正确的容器中嵌入按钮
 function embedButton(site) {
     let container;
 
@@ -35,25 +41,24 @@ function embedButton(site) {
             container = document.querySelector('.event-page-left');
             break;
         case 'eventbrite.com':
-            container = document.querySelector('.detail');
+            container = document.querySelector('div.detail__inner');
             break;
         case 'meetup.com':
-            container = document.querySelector('#event-info.text-sm');
+            container = document.querySelector('#event-info.text-sm').firstChild;
             break;
         default:
             console.warn('Unknown site:', site);
-            return; // Exit if the site is unknown
+            return; // 如果网站未知，则退出
     }
 
-    // Check if the container exists
-    if (container) {
-        // Insert the button as the first child
-        container.insertBefore(button, container.firstChild);
-    } else {
-        console.warn('Container not found for site:', site);
+    // 检查 container 是否存在并且没有按钮容器
+    if (container && !container.querySelector('.button_container')) {
+        container.appendChild(buttonContainer); 
+        console.log("Button container added to container:", container);
     }
 }
-// Detect the current site
+
+// 检测当前网站
 const currentUrl = window.location.href;
 let site = "";
 
@@ -67,11 +72,10 @@ if (currentUrl.includes('lu.ma')) {
     site = 'unknown';
 }
 
-// Call the function with the appropriate site
+// 调用嵌入按钮的函数
 embedButton(site); 
 
-
-// Debugging output
+// 调试输出
 console.log("Button created");
 
 let eventInfo = {
@@ -87,6 +91,7 @@ let eventInfo = {
     },
     description: "Event description goes here."
 };
+
 function assignInfo(eventData) {
     eventInfo.title = eventData.name || eventInfo.title;
     eventInfo.startDate = eventData.startDate || eventInfo.startDate;
@@ -99,26 +104,19 @@ function assignInfo(eventData) {
     eventInfo.description = eventData.description || eventInfo.description;
 }
 
-// Function to extract event data based on the website
+// 根据网站生成事件数据的函数
 async function generateEventData(site) {
-    
-
-    var scriptTags = document.querySelectorAll('script[type="application/ld+json"]');
-    var scriptTag = scriptTags[0];
-    var scriptTag_Mode;
-    var eventData;
-    
-    for (let st of scriptTags) {
+    const scriptTags = document.querySelectorAll('script[type="application/ld+json"]');
+    const scriptTag_Mode = Array.from(scriptTags).find(st => {
         const data = JSON.parse(st.innerText);
-        if (data.eventAttendanceMode) {
-            scriptTag_Mode = st;
-            break;
-        }
-    }
+        return data.eventAttendanceMode;
+    });
+    
+    let eventData;
     
     switch (site) {
         case 'lu.ma':
-            eventData = JSON.parse(scriptTag.innerText);
+            eventData = JSON.parse(scriptTags[0].innerText);
             assignInfo(eventData);
             break;
         case 'meetup.com':
@@ -130,32 +128,28 @@ async function generateEventData(site) {
             assignInfo(eventData);
             break;
         default:
-            // Use the default eventInfo object
+            // 使用默认的 eventInfo 对象
             break;
     }
 
-    // Get the startDate from the event object and format it to YYYYMMDD
+    // 获取事件对象中的 startDate 并格式化为 YYYYMMDD
     const startDate = new Date(eventInfo.startDate);
     const dateDigits = startDate.toISOString().split('T')[0].replace(/-/g, '');
 
-    // Generate an abbreviation from the event name and location
+    // 生成来自事件名称和位置的缩写
     const eventTitle_Local = Extract(eventInfo.title) + Extract(eventInfo.location.name);
     console.log("Event Title and Local:", eventTitle_Local);
 
-    // Combine the abbreviation with the date digits to create a unique event_id
+    // 将缩写与日期数字组合以创建唯一的 event_id
     const eventId = `${eventTitle_Local}${dateDigits}`;
     console.log("Generated Event ID:", eventId);
 
     return { eventInfo, eventId };
 }
 
-// Click event listener
+// 按钮的点击事件监听器
 button.addEventListener('click', async () => {
-
-    // Generate the event data for the detected site
     const { eventInfo, eventId } = await generateEventData(site);
-
-    // Send the eventId to the backend
     const apiUrl = `https://beta.popin.site/?event_id=${eventId}`;
     
     try {
@@ -176,19 +170,23 @@ button.addEventListener('click', async () => {
     } catch (error) {
         console.error("Error sending eventId to the backend:", error);
     }
-
-    // Open the popin page after sending the eventId
-    // window.open("https://beta.popin.site", "_blank");
 });
 
-/* // Append the button to the webpage
-document.body.appendChild(button);
+// 创建 MutationObserver
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        mutation.removedNodes.forEach((node) => {
+            // 如果按钮被删除，重新插入它
+            if (node === buttonContainer) {
+                console.log("Button container was removed, re-inserting...");
+                embedButton(site); 
+            }
+        });
+    });
+});
 
-// If inside an iframe, append the button to the parent document body
-if (window.self !== window.top) {
-    // Running inside iframe
-    window.parent.document.body.appendChild(button);
-} else {
-    // Running in the top-level document
-    document.body.appendChild(button);
-} */
+// 开始观察 DOM 变化
+observer.observe(document.body, {
+    childList: true,
+    subtree: true // 监控整个文档的变化
+});
